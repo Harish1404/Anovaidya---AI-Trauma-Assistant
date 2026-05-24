@@ -54,12 +54,13 @@ def supervisor_node(state: TraumaGraphState):
         print(f"Raw LLM Output: {response_text[:300]}...")
         
         # Smart fallback based on severity
+                # Smart fallback based on severity
         if severity >= 4:
             next_action = "escalate_to_doctor"
-            user_message = "This sounds serious. I recommend consulting a doctor soon. Would you like me to help find nearby doctors?"
+            user_message = "This sounds quite serious. I strongly recommend you see a doctor as soon as possible. Would you like me to find nearby hospitals and prepare a summary report for them?"
         else:
             next_action = "continue_conversation"
-            user_message = "Thank you for sharing. Can you tell me more about your symptoms or how it happened?"
+            user_message = "Thank you for sharing. Can you tell me more details so I can help better?"
 
     print(f"🤖 Supervisor → Next: {next_action} | Severity: {severity}")
 
@@ -68,3 +69,5 @@ def supervisor_node(state: TraumaGraphState):
         "messages": messages + [AIMessage(content=user_message)],
         "next_action": next_action
     }
+
+    

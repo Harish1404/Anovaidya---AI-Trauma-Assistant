@@ -189,15 +189,4 @@ graph TD
 
 ---
 
-## 🚀 Recommended Implementation Order
 
-To ensure rapid progress and clean code, we recommend building the application in this sequence:
-
-- [ ] **Phase 1: Backend Initialization** — Complete project directory setup, set up `.env` settings, and initialize FastAPI server.
-- [ ] **Phase 2: LLM Integration** — Implement LiteLLM router wrapper with Groq primary and Google Gemini backup failover rules.
-- [ ] **Phase 3: RAG Construction** — Load first-aid PDFs, write text splitter scripts, chunk documents into ChromaDB, and build the retrieval service.
-- [ ] **Phase 4: Agent Core** — Build the basic LangGraph supervisor, connecting state properties and the Conversation Node.
-- [ ] **Phase 5: Severity Engine** — Design the Severity assessment node and verify logic loops using PyTest.
-- [ ] **Phase 6: Escalation & Dispatch** — Add the Google Maps API search node, document summary layout, and Brevo mailer integration.
-- [ ] **Phase 7: User Management** — Integrate MongoDB repositories, JWT authentication middlewares, and session storage.
-- [ ] **Phase 8: Frontend Construction** — Build the Next.js 15 web client, style UI modules with Tailwind/Shadcn, connect web-sockets/server-sent-events for chat streaming, and finalize verification.
