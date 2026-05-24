@@ -15,7 +15,9 @@ langchain
 langchain-community
 langchain-groq
 langchain-google-genai
-langsmith==0.1.147
+langchain-huggingface
+sentence-transformers
+langsmith
 
 litellm
 

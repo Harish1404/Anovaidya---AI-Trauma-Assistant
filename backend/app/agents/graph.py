@@ -1,18 +1,15 @@
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from app.agents.state import TraumaGraphState
-from app.core.config import settings
-import os
+from app.agents.nodes.conversation_node import conversation_node
+from app.agents.nodes.severity_node import severity_node
+from app.agents.nodes.supervisor_node import supervisor_node
 
-# Temporary placeholder nodes (we will implement real ones later)
-def conversation_node(state: TraumaGraphState):
-    print("🤖 Conversation Node called")
-    return state
 
-def severity_node(state: TraumaGraphState):
-    print("⚠️  Severity Check Node called")
-    return state
 
+def route_after_severity(state: TraumaGraphState):
+    """Conditional routing"""
+    return "supervisor" if state.get("severity_score", 0) >= 4 else "supervisor"
 # Build Graph
 def create_trauma_graph():
     workflow = StateGraph(TraumaGraphState)
@@ -20,20 +17,22 @@ def create_trauma_graph():
     # Add nodes
     workflow.add_node("conversation", conversation_node)
     workflow.add_node("severity", severity_node)
+    workflow.add_node("supervisor", supervisor_node)
     
-    # Basic flow for now
+    
+    # Define flow
     workflow.add_edge(START, "conversation")
     workflow.add_edge("conversation", "severity")
-    workflow.add_edge("severity", END)
+    workflow.add_edge("severity", "supervisor")
+
+    workflow.add_edge("supervisor", END)
+
     
-    # Add memory (will use Redis later)
     memory = MemorySaver()
     
     return workflow.compile(checkpointer=memory)
 
-# Create global graph instance
 trauma_graph = create_trauma_graph()
-
-print("✅ TraumaAI LangGraph Initialized")
+print("✅ Full TraumaAI LangGraph with Conversation + RAG Initialized")
 
 

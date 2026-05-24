@@ -18,7 +18,6 @@ class ChatResponse(BaseModel):
 @router.post("/")
 async def chat_endpoint(request: ChatRequest):
     try:
-        # Prepare input
         input_state = {
             "messages": [HumanMessage(content=request.message)],
             "user_id": request.user_id,
@@ -26,14 +25,16 @@ async def chat_endpoint(request: ChatRequest):
             "report_sent": False
         }
         
-        # Run graph
-        config = {"configurable": {"thread_id": request.session_id}}
+        config = {"configurable": {"thread_id": request.session_id or "default"}}
+        
         result = trauma_graph.invoke(input_state, config)
         
-        last_message = result["messages"][-1].content if result["messages"] else "No response"
+        # Get the last AI message (this should be from supervisor)
+        messages = result.get("messages", [])
+        response_text = messages[-1].content if messages else "I'm here to help."
         
         return ChatResponse(
-            response=last_message,
+            response=response_text,
             severity_score=result.get("severity_score")
         )
         
