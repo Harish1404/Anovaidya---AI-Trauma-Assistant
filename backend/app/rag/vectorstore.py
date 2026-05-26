@@ -11,7 +11,7 @@ def get_vectorstore():
     
     # Load and process documents only if vectorstore doesn't exist
     if not os.path.exists(persist_directory) or len(os.listdir(persist_directory)) == 0:
-        print("🔄 Building new vector database...")
+        print("[RAG] Building new vector database...")
         documents = load_knowledge_base()
         chunks = split_documents(documents)
         
@@ -21,13 +21,13 @@ def get_vectorstore():
                 embedding=embeddings,
                 persist_directory=persist_directory
             )
-            print(f"✅ VectorStore created with {len(chunks)} chunks")
+            print(f"[RAG] VectorStore created with {len(chunks)} chunks")
         else:
-            print("⚠️  No PDFs found. VectorStore will be empty.")
+            print("[RAG] No PDFs found. VectorStore will be empty.")
             vectorstore = Chroma(embedding_function=embeddings, persist_directory=persist_directory)
     else:
         vectorstore = Chroma(persist_directory=persist_directory, embedding_function=embeddings)
-        print("✅ Loaded existing VectorStore")
+        print("[RAG] Loaded existing VectorStore")
     
     return vectorstore
 

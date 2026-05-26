@@ -4,6 +4,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GEMINI_API_KEY: str
     MONGO_URI: str
+    DB_NAME: str
     REDIS_URL: str
     GOOGLE_MAPS_API_KEY: str
     BREVO_API_KEY: str

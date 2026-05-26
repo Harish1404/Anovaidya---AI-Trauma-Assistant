@@ -37,6 +37,7 @@ pytest
 pytest-asyncio
 
 googlemaps
+geopy
 
 httpx
 

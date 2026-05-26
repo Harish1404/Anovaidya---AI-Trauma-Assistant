@@ -2,7 +2,19 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routes import chat_router
+from contextlib import asynccontextmanager
+from app.db.mongodb import connect_to_mongo, close_mongo_connection
+import logging
 
+logger = logging.getLogger("uvicorn")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("App startup")
+    await connect_to_mongo()
+    yield
+    logger.info("App shutdown")
+    await close_mongo_connection()
 
 
 app = FastAPI(
