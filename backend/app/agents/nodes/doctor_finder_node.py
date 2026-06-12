@@ -1,70 +1,85 @@
+import logging
 from app.agents.state import TraumaGraphState
-from app.repo.doctor_repo import doctor_repo
+from app.utils.google_maps import find_nearby_medical_facilities
 from langchain_core.messages import AIMessage
 
+logger = logging.getLogger("uvicorn")
+
+
 async def doctor_finder_node(state: TraumaGraphState):
-    """Find specialized doctors near the user's geocoded location."""
-    
-    user_lat = state.get("latitude", 13.0827)  # Default: Chennai center
-    user_lon = state.get("longitude", 80.2707)
+    """Find nearby hospitals, clinics, and specialists using Google Maps Places API."""
+
+    user_lat = state.get("latitude")
+    user_lon = state.get("longitude")
     specialization = state.get("specialization_needed")
-    severity = state.get("severity_score", 3)
     location_str = state.get("user_location_string", "your area")
-    
+
+    # Fail explicitly if location is not available
+    if user_lat is None or user_lon is None:
+        return {
+            **state,
+            "next_action": "ask_location",
+            "messages": state.get("messages", []) + [AIMessage(content=(
+                "I need your location to find nearby doctors. "
+                "Could you please share your current location? "
+                "For example: **Adyar, Chennai Tamilnadu**"
+            ))]
+        }
+
     message_parts = []
-    registered_doctors = []
-    
+    facilities = []
+
     try:
-        # Query doctors with specialization and 4km radius, min 5, max 10
-        registered_doctors = await doctor_repo.get_nearby_specialized_doctors(
-            user_lat=user_lat,
-            user_lon=user_lon,
+        facilities = await find_nearby_medical_facilities(
+            lat=user_lat,
+            lng=user_lon,
             specialization=specialization,
-            radius_km=4.0,
-            min_doctors=5,
-            max_doctors=10
+            min_results=3,
+            max_results=10,
         )
-        
-        if registered_doctors:
+
+        if facilities:
             spec_label = f" specializing in **{specialization}**" if specialization else ""
             message_parts.append(
-                f"I found {len(registered_doctors)} doctors{spec_label} near **{location_str}**. "
+                f"I found {len(facilities)} hospitals & clinics{spec_label} near **{location_str}**. "
                 f"Here are the best options for you:\n"
             )
-            
-            for i, doc in enumerate(registered_doctors, 1):
-                availability = "Available Now" if doc.get("is_available") else "Currently Unavailable"
-                distance = doc.get("distance_km", "N/A")
-                
+
+            for i, fac in enumerate(facilities, 1):
+                availability = "Open Now" if fac.get("is_available") else "Hours N/A"
+                distance = fac.get("distance_km", "N/A")
+                rating = fac.get("rating")
+                rating_str = f" | ⭐ {rating}/5" if rating else ""
+
                 message_parts.append(
-                    f"**{i}. {doc['full_name']}** — {doc['hospital_name']}\n"
-                    f"   Specialization: {doc['specialization']} | Experience: {doc.get('experience_years', 'N/A')} years\n"
-                    f"   Location: {doc['clinic_address']} ({distance} km away)\n"
+                    f"**{i}. {fac['full_name']}**\n"
+                    f"   Specialization: {fac['specialization']}{rating_str}\n"
+                    f"   Location: {fac['clinic_address']} ({distance} km away)\n"
                     f"   Status: {availability}\n"
                 )
-            
+
             message_parts.append(
-                "\nPlease tell me which doctor you'd like to choose "
-                "(e.g., *\"I want to select Dr. Priya Sharma\"*)."
+                "\nPlease tell me which hospital or clinic you'd like to choose "
+                "(e.g., *\"I want to select Apollo Hospitals\"*)."
             )
         else:
             message_parts.append(
-                "I wasn't able to find registered doctors in your area right now. "
+                "I wasn't able to find hospitals or clinics near your location right now. "
                 "Please visit the nearest hospital or call emergency services."
             )
-            
+
     except Exception as e:
-        print(f"[DOCTOR_FINDER] Error: {e}")
+        logger.error(f"[DOCTOR_FINDER] Error: {e}")
         message_parts.append(
-            "I encountered an issue while searching for doctors. "
+            "I encountered an issue while searching for nearby facilities. "
             "Please try again or visit the nearest hospital."
         )
 
     final_message = "\n".join(message_parts)
-    
+
     return {
         **state,
-        "doctor_recommendation": registered_doctors,
+        "doctor_recommendation": facilities,
         "next_action": "select_doctor",
         "messages": state.get("messages", []) + [AIMessage(content=final_message)]
     }

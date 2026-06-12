@@ -41,6 +41,8 @@ geopy
 
 httpx
 
+python-docx
+
 
 # utilities
 typing-extensions

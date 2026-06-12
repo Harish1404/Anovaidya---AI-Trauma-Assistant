@@ -1,8 +1,9 @@
 from app.agents.state import TraumaGraphState
 from app.core.litellm_client import llm_client
 from app.utils.prompts import TRAUMA_SYSTEM_PROMPT
+from app.utils.llm_messages import langchain_to_openai
 from app.rag.vectorstore import retriever
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import AIMessage
 
 def conversation_node(state: TraumaGraphState):
     """Interactive triage conversation node with RAG-grounded responses."""
@@ -34,11 +35,12 @@ Relevant First-Aid Knowledge (use this to ground your response):
 {context}
 """
 
-    full_messages = [SystemMessage(content=system_prompt), *messages]
-    
+    llm_messages = [{"role": "system", "content": system_prompt}]
+    llm_messages.extend(langchain_to_openai(messages))
+
     # Use fast model for conversational turns (cost-efficient)
     response = llm_client.call(
-        messages=[{"role": "user", "content": msg.content} for msg in full_messages],
+        messages=llm_messages,
         model="fast",
         temperature=0.7
     )

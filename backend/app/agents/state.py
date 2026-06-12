@@ -2,6 +2,8 @@ from typing import TypedDict, Annotated, List, Optional
 from langgraph.graph import add_messages
 from langchain_core.messages import BaseMessage
 
+from app.agents.constants import CONTINUE
+
 class TraumaGraphState(TypedDict):
     """Main state for TraumaAI LangGraph"""
     messages: Annotated[List[BaseMessage], add_messages]
@@ -16,8 +18,8 @@ class TraumaGraphState(TypedDict):
     specialization_needed: Optional[str] = None
     
     # Routing control
-    next_action: Optional[str] = "continue"
-    # Values: continue / ask_location / show_doctors / select_doctor / ask_email / send_report
+    next_action: Optional[str] = CONTINUE
+    # Values: continue_conversation / ask_location / show_doctors / select_doctor / ask_email / complete
     
     # Location tracking
     user_location_string: Optional[str] = None
@@ -30,6 +32,8 @@ class TraumaGraphState(TypedDict):
     
     # Report & email
     final_summary: Optional[str] = None
+    report_docx_path: Optional[str] = None
+    report_download_url: Optional[str] = None
     report_sent: bool = False
     user_email: Optional[str] = None
     email_sent_success: bool = False

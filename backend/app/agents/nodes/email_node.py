@@ -1,56 +1,48 @@
+from app.agents.constants import COMPLETE
 from app.agents.state import TraumaGraphState
 from app.utils.brevo_email import send_report_via_brevo
-from app.repo.doctor_repo import doctor_repo
 from langchain_core.messages import AIMessage
 
 async def email_node(state: TraumaGraphState):
-    """Send the clinical report via Brevo to the doctor and user."""
+    """Send the clinical report via Brevo to the user (and optionally the doctor)."""
     
     messages = state["messages"]
     user_email = state.get("user_email")
-    selected_doctor_name = state.get("selected_doctor_name")
+    selected_doctor_name = state.get("selected_doctor_name", "Unknown")
     report_content = state.get("final_summary", "Report not available.")
     severity = state.get("severity_score", 3)
+    docx_path = state.get("report_docx_path")
     
-    if not user_email or not selected_doctor_name:
+    if not user_email:
         return {
             **state,
             "email_sent_success": False,
-            "messages": messages + [AIMessage(content="I need both your email and a selected doctor to send the report.")]
+            "messages": messages + [AIMessage(content="I need your email address to send the report. Please share it.")]
         }
     
-    # Look up doctor email from DB
-    doctor = await doctor_repo.get_doctor_by_name(selected_doctor_name)
-    
-    if not doctor:
-        return {
-            **state,
-            "email_sent_success": False,
-            "messages": messages + [AIMessage(content=f"I couldn't find {selected_doctor_name} in our records. Please select a doctor from the list.")]
-        }
-    
-    doctor_email = doctor.get("email", "")
-    doctor_name = doctor.get("full_name", selected_doctor_name)
-    
-    # Send via Brevo
+    # Since doctors now come from Google Maps (no email in DB),
+    # we send the report to the user's email only.
+    # The user can then forward it to the doctor directly.
     success = await send_report_via_brevo(
-        doctor_email=doctor_email,
-        doctor_name=doctor_name,
+        doctor_email=user_email,  # Send to user (as primary recipient)
+        doctor_name=selected_doctor_name,
         user_email=user_email,
         report_content=report_content,
-        severity_score=severity
+        severity_score=severity,
+        docx_path=docx_path,
     )
     
     if success:
         response_msg = (
-            f"Your clinical report has been successfully sent to **{doctor_name}** "
-            f"({doctor.get('hospital_name', '')}) and a copy has been sent to **{user_email}**.\n\n"
-            "Please visit the doctor at your earliest convenience. Take care and stay safe!"
+            f"✅ Your clinical report has been successfully emailed to **{user_email}**.\n\n"
+            f"The report is addressed to **{selected_doctor_name}**. "
+            "Please print or forward the attached Word document when you visit the hospital.\n\n"
+            "Take care and stay safe! 🙏"
         )
     else:
         response_msg = (
             "I tried sending the report but encountered an issue with the email service. "
-            "You can still visit the doctor directly and describe your symptoms. "
+            "You can still download the report using the link above and visit the doctor directly. "
             "Please take care!"
         )
     
@@ -58,5 +50,6 @@ async def email_node(state: TraumaGraphState):
         **state,
         "email_sent_success": success,
         "report_sent": success,
+        "next_action": COMPLETE if success else state.get("next_action"),
         "messages": messages + [AIMessage(content=response_msg)]
     }

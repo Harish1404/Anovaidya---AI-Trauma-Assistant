@@ -1,9 +1,12 @@
+import json
+import logging
+import re
 from app.agents.state import TraumaGraphState
 from app.core.litellm_client import llm_client
 from app.utils.prompts import SEVERITY_SYSTEM_PROMPT
 from langchain_core.messages import AIMessage
-import json
-import re
+
+logger = logging.getLogger("uvicorn")
 
 def severity_node(state: TraumaGraphState):
     """Assess severity and identify the needed medical specialization."""
@@ -28,12 +31,16 @@ def severity_node(state: TraumaGraphState):
         cleaned = re.sub(r'```json|```', '', response_text).strip()
         result = json.loads(cleaned)
         
-        severity_score = int(result.get("severity_score", 2))
+        try:
+            severity_score = int(result.get("severity_score", 2))
+        except (ValueError, TypeError):
+            severity_score = 2
+            
         needs_doctor = result.get("needs_doctor", False)
         specialization_needed = result.get("specialization_needed", "General Physician")
         
     except Exception as e:
-        print(f"[SEVERITY] LLM Parse Error: {e}")
+        logger.error(f"[SEVERITY] LLM Parse Error: {e}")
         severity_score = 2
         needs_doctor = False
         specialization_needed = "General Physician"
@@ -44,7 +51,7 @@ def severity_node(state: TraumaGraphState):
             "specialization_needed": "General Physician"
         }
 
-    print(f"[SEVERITY] Score: {severity_score}/5 | Needs Doctor: {needs_doctor} | Specialization: {specialization_needed}")
+    logger.info(f"[SEVERITY] Score: {severity_score}/5 | Needs Doctor: {needs_doctor} | Specialization: {specialization_needed}")
 
     return {
         **state,

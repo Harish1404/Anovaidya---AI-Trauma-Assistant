@@ -1,6 +1,8 @@
 import httpx
 from app.core.config import settings
 import logging
+import base64
+from pathlib import Path
 
 logger = logging.getLogger("uvicorn")
 
@@ -12,11 +14,13 @@ async def send_report_via_brevo(
     doctor_name: str,
     user_email: str,
     report_content: str,
-    severity_score: int = 3
+    severity_score: int = 3,
+    docx_path: str = None
 ) -> bool:
     """
     Send the clinical trauma report to both the doctor and the user
     using the Brevo Transactional Email API.
+    Optionally attaches the Word document report.
     
     Returns True if email was sent successfully, False otherwise.
     """
@@ -61,6 +65,23 @@ async def send_report_via_brevo(
         "subject": f"[TraumaAI] Clinical Trauma Report — Severity {severity_score}/5",
         "htmlContent": html_body
     }
+
+    # Attach Word document if available
+    if docx_path:
+        docx_file = Path(docx_path)
+        if docx_file.exists():
+            try:
+                with open(docx_file, "rb") as f:
+                    content_bytes = f.read()
+                encoded = base64.b64encode(content_bytes).decode("utf-8")
+                payload["attachment"] = [{
+                    "content": encoded,
+                    "name": docx_file.name,
+                    "type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                }]
+                logger.info(f"[BREVO] Attaching Word document: {docx_file.name}")
+            except Exception as e:
+                logger.warning(f"[BREVO] Could not attach docx: {e}")
     
     headers = {
         "accept": "application/json",
